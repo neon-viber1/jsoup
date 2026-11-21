@@ -682,4 +682,22 @@ public class NodeTest {
         assertTrue(data.parentElementIs("path", NamespaceSvg));
         assertTrue(data.parentNameIs("path"));
     }
+
+    @Test void absSrcset() {
+        Document doc = org.jsoup.Jsoup.parse("<img id=a srcset='a.png 1x,  /b.png 2x, http://x.com/c,d.png 480w ,e.png'>"
+            + "<img id=b><img id=c srcset=''>", "http://foo/dir/");
+        assertEquals("http://foo/dir/a.png 1x, http://foo/b.png 2x, http://x.com/c,d.png 480w, http://foo/dir/e.png",
+            doc.getElementById("a").absSrcset("srcset"));
+        assertEquals("", doc.getElementById("b").absSrcset("srcset"));
+        assertEquals("", doc.getElementById("c").absSrcset("srcset"));
+        Document noBase = org.jsoup.Jsoup.parse("<img srcset='a.png 1x, http://y/b.png 2x'>");
+        assertEquals("http://y/b.png 2x", noBase.selectFirst("img").absSrcset("srcset"));
+    }
+
+    @Test void resolveUrl() {
+        Document doc = org.jsoup.Jsoup.parse("<head><base href='http://base/p/'></head><p>t", "http://foo/");
+        assertEquals("http://base/p/x.png", doc.selectFirst("p").resolveUrl("x.png"));
+        assertEquals("http://z/y", doc.selectFirst("p").resolveUrl("http://z/y"));
+        assertEquals("", org.jsoup.Jsoup.parse("<p>").selectFirst("p").resolveUrl("rel"));
+    }
 }

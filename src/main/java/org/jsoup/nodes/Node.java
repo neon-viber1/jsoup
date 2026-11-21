@@ -255,6 +255,8 @@ public abstract class Node implements Cloneable {
      * @return An absolute URL if one could be made, or an empty string (not null) if the attribute was missing or
      * could not be made successfully into a URL.
      * @see #attr
+     * @see #resolveUrl(String)
+     * @see #absSrcset(String)
      * @see java.net.URL#URL(java.net.URL, String)
      */
     public String absUrl(String attributeKey) {
@@ -263,6 +265,68 @@ public abstract class Node implements Cloneable {
             return "";
 
         return StringUtil.resolve(baseUri(), attributes().getIgnoreCase(attributeKey));
+    }
+
+    /**
+     Resolve an arbitrary URL string against this node's {@link #baseUri()}. Use this for URLs that are not a whole
+     attribute value, for example those parsed out of a {@code srcset}. Behaves like {@link #absUrl(String)}: an
+     already absolute URL is returned as-is, otherwise it is made absolute using the base URI.
+     @param url the (possibly relative) URL
+     @return an absolute URL, or an empty string if it could not be resolved
+     @since 1.24.2
+     */
+    public String resolveUrl(String url) {
+        Validate.notNull(url);
+        return StringUtil.resolve(baseUri(), url);
+    }
+
+    /**
+     Get the value of a {@code srcset}-style attribute (a comma separated list of URL candidates, each optionally
+     followed by a width or density descriptor) with every URL made absolute against this node's {@link #baseUri()}.
+     Descriptors are preserved. Candidates are joined with {@code ", "}. Candidates whose URL cannot be resolved are
+     omitted.
+     @param attributeKey the attribute key, e.g. {@code srcset}
+     @return the rewritten value, or an empty string if the attribute is missing or has no resolvable candidates
+     @see #absUrl(String)
+     @see #resolveUrl(String)
+     @since 1.24.2
+     */
+    public String absSrcset(String attributeKey) {
+        Validate.notEmpty(attributeKey);
+        if (!(hasAttributes() && attributes().hasKeyIgnoreCase(attributeKey)))
+            return "";
+        String v = attributes().getIgnoreCase(attributeKey);
+        StringBuilder out = new StringBuilder();
+        int len = v.length(), i = 0;
+        while (i < len) {
+            while (i < len && (v.charAt(i) == ',' || Character.isWhitespace(v.charAt(i)))) i++;
+            if (i >= len) break;
+            int start = i;
+            while (i < len && !Character.isWhitespace(v.charAt(i))) i++;
+            String url = v.substring(start, i);
+            String descriptor = "";
+            if (url.endsWith(",")) {
+                int e = url.length();
+                while (e > 0 && url.charAt(e - 1) == ',') e--;
+                url = url.substring(0, e);
+            } else {
+                int ds = i, depth = 0;
+                while (i < len && !(v.charAt(i) == ',' && depth == 0)) {
+                    char c = v.charAt(i);
+                    if (c == '(') depth++;
+                    else if (c == ')' && depth > 0) depth--;
+                    i++;
+                }
+                descriptor = v.substring(ds, i).trim().replaceAll("\\s+", " ");
+            }
+            if (url.isEmpty()) continue;
+            String abs = resolveUrl(url);
+            if (abs.isEmpty()) continue;
+            if (out.length() > 0) out.append(", ");
+            out.append(abs);
+            if (!descriptor.isEmpty()) out.append(' ').append(descriptor);
+        }
+        return out.toString();
     }
 
     protected abstract List<Node> ensureChildNodes();
