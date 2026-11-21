@@ -3,6 +3,7 @@
 ## 1.24.2 (Pending)
 
 ### Improvements
+* Added `Node.resolveUrl(String)` to resolve any URL against a node's base URI, and `Node.absSrcset(String)` to get a `srcset`-style attribute with each URL made absolute. [#NNNN](https://github.com/jhy/jsoup/issues/NNNN)
 * Added the opt-in `Tag.RcDataRecover` option to recover content after missing `title` or `textarea` end tags. [#2640](https://github.com/jhy/jsoup/issues/2640)
 
 ### Bug Fixes
